@@ -27,12 +27,12 @@ local ui = Element:from({
     { 
         width = 100, 
         height = 100,
-        color = {1,0,0,1} -- red
+        color = { 1, 0, 0, 1 } -- red
     },
     { 
         width = 100, 
         height = 100,
-        color = {0,0,1,1} -- blue
+        color = { 0, 0, 1, 1 } -- blue
     },
 })
 ```
@@ -62,7 +62,7 @@ elements can also be constructed with a function call. if we abuse lua's omissio
 ```lua
 local ui = Element { 
     gap = 10, 
-    color = {0,0,0,0},
+    color = { 0, 0, 0, 0 },
 
     Element { width = 150, height = 50 },
     Element { width = 150, height = 50 },
@@ -208,11 +208,11 @@ local ui = Element {
 
     Element { 
         width_sizing = "grow", height_sizing = "grow", 
-        color = {1,0,0,1} 
+        color = { 1, 0, 0, 1 } 
     },
     Element { 
         width_sizing = "grow", height_sizing = "grow", 
-        color = {0,1,0,1} 
+        color = { 0, 1, 0, 1 } 
     },
 }
 
