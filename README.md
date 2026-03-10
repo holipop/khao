@@ -1,327 +1,130 @@
-# khao
+# khao ข้าว
 
 > [!WARNING]
 > hey! khao is a work in progress (and so is this readme)
 
-**khao** (thai for "rice") is a declarative ui library for löve inspired by [clay](https://github.com/nicbarker/clay) and HTML. it's designed to handle all of the math behind complex layouts while leaving the graphical and logical work for the user.
+**khao** (thai for "rice") is a declarative layout library for LÖVE inspired by [clay](https://github.com/nicbarker/clay) and HTML. It's designed to be as close to "what you see is what you get" as possible within the syntax of Lua.
 
-## installation
-place `khao.lua` in your project and `require` it in each file you need it.
-
+## Installation
+Place `khao.lua` in your project and use `require` whereever you need it.
 ```lua
--- relative to main.lua
-local khao = require("path.to.khao")
+local khao = require("khao") -- if khao.lua is in your root directory
+local khao = require("path.to.khao") -- if it's in a subfolder
 ```
 
-## basic usage
-`Element`s act as the building blocks of khao. to construct one, use the `:from` method and supply a configuration table where its __keys are properties__ and its __indices are child elements__.
+## Overview
 
-```lua
-local Element = khao.Element
+## Example
 
-local ui = Element:from({
-    width_sizing = "fit",
-    height_sizing = "fit",
-    padding = 5,
+# API Reference
+## `Element`
+The base element class.
 
-    { 
-        width = 100, 
-        height = 100,
-        color = { 1, 0, 0, 1 } -- red
-    },
-    { 
-        width = 100, 
-        height = 100,
-        color = { 0, 0, 1, 1 } -- blue
-    },
-})
-```
-from here, we can call the methods `:calculate_dimensions` and `:calculate_positions`. _these need to be called at least once in this order_.
+### `:from (config: table): Element`
+Constructs an Element from a given configuration table, its keys being properties and its indices being child elements. Can also be invoked by calling the `Element` class itself.
 
-```lua
-ui:calculate_dimensions() -- computes each element's widths and heights
-ui:calculate_positions() -- computes the relative x and y of each element
-```
-and now we can call our element's `:draw` method and place it whereever we like, only needing to worry about the sizing of our elements.
-```lua
-local cursor_x, cursor_y = 0, 0
+#### Configuration Parameters
+- `width_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the width. `fixed"` by default. 
+- `height_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the height. `fixed"` by default. 
+- `width: number` - If sizing is set to `"fixed"`, the width in pixels. If sizing is set to `"grow"`, the proportion of available width this element takes.
+- `height: number` - If sizing is set to `"fixed"`, the height in pixels. If sizing is set to `"grow"`, the proportion of available height this element takes.
+- `min_width: number` - The minimum width in pixels.
+- `max_width: number` - The maximum width in pixels.
+- `min_height: number` - The minimum height in pixels.
+- `max_height: number` - The maximum height in pixels.
+- `align_x: "left"|"center"|"right"` - The positioning of child elements along the x-axis. `"left"` by default. 
+- `align_y: "top"|"center"|"bottom"` - The positioning of child elements along the y-axis. `"top"` by default.
+- `direction: "row"|"column"` - `"row"` by default. The direction child elements are drawn.
+- `padding: number` - A shorthand for setting all padding values.
+- `padding_left: number` - The amount of pixels between the child elements and the left edge.
+- `padding_right: number` - The amount of pixels between the child elements and the right edge.
+- `padding_top: number` - The amount of pixels between the child elements and the top edge.
+- `padding_bottom: number` - The amount of pixels between the child elements and the bottom edge.
+- `gap: number` - The amount of pixels between each child element.
+- `name: string` - Just a string, mainly intended for drawing/debugging.
+- `color: [number, number, number, number]` - A table of RGBA values, intended for `love.graphics.setColor`.
+- `on_update: function (self, dt: number)` - A callback fired when the root element calls `:update`.
+- `on_draw: function (self, x: number, y: number)` - A callback fired when the root element calls `:draw`
+- `post_draw: function (self, x: number, y: number)` - A callback fired after child elements have been drawn.
 
-function love.mousemoved (x, y)
-    cursor_x = x
-    cursor_y = y
-end
+Instances of `Element` have the following fields upon creation along with the ones listed above. 
+- `parent: Element?` - The parent element. `nil` if it is a root element.
+- `x: number` - The x position relative to its parent.
+- `y: number` - The y position relative to its parent.
+- `w: number` - The calculated width.
+- `h: number` - The calculated height.
 
-function love.draw ()
-    ui:draw(cursor_x, cursor_y)
-end
-```
-![basic_example](docs/basic_example.gif)
+These should be treated as read-only.
 
-## a bit more in-depth
-elements can also be constructed with a function call. if we abuse lua's omission of parenthesis for table literals, we can get a much cleaner mark-up.
-```lua
-local ui = Element { 
-    gap = 10, 
-    color = { 0, 0, 0, 0 },
+### `:add_children (...: table|Element)`
+Adds child elements to the end of the list of children. Configuration tables can be inputed which get instantiated as the type of the element.
 
-    Element { width = 150, height = 50 },
-    Element { width = 150, height = 50 },
-    Element { width = 150, height = 50 },
-    Element { width = 150, height = 50 },
-}
-```
+### `:extend (can_have_children: boolean?): table`
+Returns a class that extends the Element class. If `false` is inputed, it prevents this type from having child elements.
 
-when constructing an element, the table you pass can have the following fields:
-* `width_sizing` and `height_sizing` - these determine how the element should size on each axis. 
-  - `"fixed"` is their default setting which sets the computed width and height to whatever you passed in.
-  - `"fit"` sizing will fit its child elements and leave no empty space.
-  - `"grow"` sizing will stretch itself to fit in its parent element.
-* `width` and `height` - the side lengths of the element in pixels. 
-  - these values are disregarded if their respective sizing is `"fit"`. 
-  - when their respective sizing is `"grow"`, their values become growth factors.
-* `min_width` and `min_height` - the minimum amount of pixels the side lengths can be.
-* `max_width` and `max_height` - the maximum amount of pixels the side lengths can be.
-* `direction` - can be `"row"` or `"column"`, determines whether elements should flow in a row or in a column.
-  - is `"row"` by default.
-* `align_x` - can be `"left"`, `"center"`, or `"right"`. dictates where the child elements are aligned.
-  - is `"left"` by default.
-* `align_y` - can be `"top"`, `"center"`, or `"bottom"`. dictates where the child elements are aligned. 
-  - is `"top"` by default.
-* `padding_left`, `padding_right`, `padding_top`, `padding_bottom` - each define the amount of padding in pixels each side of the element should have. 
-  - when defining an element, you can set just `padding` as a shorthand to set all of them with the same value.
-* `gap` - determines how many pixels of space are put between child elements.
-* `name` - just a string. only used for drawing/debugging.
-* `color` - a table intended for `love.graphics.setColor`. only used for drawing.
-* `on_update` and `on_draw` - callbacks that are fired when `:update` and `:draw` are called, respectively. these are both executed in depth-first pre-order.
-* `post_draw` - this is called depth-first *post*-order and is mainly used if you need to do any clean-up after your element is done drawing its children.
+### `:init ()`
+An abstract method called whenever elements are instantiated. Intended for subclasses to override with custom initialization.
 
-any keys passed in that aren't apart of the list above will be safely ignored.
+### `:calculate ()`
+Calculates the dimensions and positions of the element and its descendents. This should be called after initialization and whenever changes are made an element's properties so it and its descendents' `x`, `y`, `w`, and `h` fields are updated.
 
-it's important to note that the table passed used for construction is ***converted*** into an element.
-```lua
-local config = { width = 50, height = 50 }
-local ui = Element:from(config)
+### `:update (dt: number)`
+Calls the element's and its descendents' `:on_update` callbacks.
 
-config:calculate_dimensions() -- doesn't error
+### `:on_update (dt: number)`
+The default callback fired by `:update` and called if an element instance doesn't have an `on_update` callback, intended to be overriden by subclasses. This is called before its child elements.
 
-print(config == ui) -- true
-```
-after an element has been constructed, it and its children gets the following fields:
-- `x` - the x position *relative* to its parent.
-- `y` - the y position *relative* to its parent.
-- `w` - the computed width.
-- `h` - the computed height.
-- `parent` - the element's parent element. the root element will have no parent field.
+### `:draw (x: number, y: number)`
+Calls the element's and its descendents `:on_draw` and `:post_draw` callbacks.
 
-## methods
+### `:on_draw (x: number, y: number)`
+The default callback fired by `:draw` and called if an element instance doesn't have an `on_draw` callback, intended to be overriden by subclasses. This is called *before* its child elements are drawn.
 
-### `:extend` (can_have_children: boolean?): table
-returns a class that extends the `Element` class. its only param can be set to `false` if you don't want to have children.
+### `:post_draw (x: number, y: number)`
+The default callback fired by `:draw` and called if an element instance doesn't have an `post_draw` callback, intended to be overriden by subclasses. This is called *after* its child elements are drawn.
 
-```lua
-local Menu = Element:extend() -- true by default
-local MenuItem = Element:extend(false)
-
-local ui = Menu {
-    MenuItem {},
-    MenuItem {},
-    MenuItem {
-        Element {} -- this will cause an error
-    }
-}
-```
-
-### `:init` ()
-`:init` is called whenever an element or a subclass of element is called and is intended to be overriden by the user if needed. 
-
-```lua
--- an element that's always set to grow.
-local Growable = Element:extend()
-function Growable:init ()
-    self.width_sizing = "grow"
-    self.height_sizing = "grow"
-end
-
-local ui = Element {
-    width = 200, height = 100,
-
-    -- when computed, will have a dimensions 200x100
-    Growable {}, 
-}
-```
-
-### `:from` (config: table): Element
-this converts a given table into an element. the string keys of the given table are properties and its indices become child elements.
-
-the indices can be plain tables, in which they'll become the same type as their parent.
-
-this method is used for the class's `__call` metamethod.
-
-```lua
--- these are identical
-local foo = Element:from({ width = 50, height = 75 })
-local bar = Element({ width = 50, height = 75 })
-local baz = Element { width = 50, height = 75 } 
-
-local Thing = Element:extend()
-
-local ui = Thing {
-    {}, -- will become type Thing
-    Element {
-        {}, -- will become type Element
-    }
-}
-```
-
-### `:add_children` (...: table)
-appends the list of this element's children. if a plain table is given, it'll become the same type as this element.
-
-```lua
-local ui = Element {
-    width_sizing = "fit", height_sizing = "fit",
-    direction = "row"
-}
-
-ui:append_children(
-    { width = 50, height = 50 },
-    { width = 50, height = 50 },
-)
-
-ui:calculate_dimensions()
-ui:calculate_positions()
-
-print(ui.w) -- 100
-print(ui.h) -- 50
-```
-
-### `:calculate_dimensions` ()
-calculates the dimensions of this element and its descendents. whenever an element is edited, this should be called for changes to update.
-
-### `:calculate_positions` ()
-calculates the relative positions of this element and its descendents. whenever `:calculate_dimensions` is called, this should be immediately after in order for relative positions to update.
-
-```lua
-local ui = Element {
-    width = 100, height = 100,
-    padding = 10,
-    gap = 10,
-
-    Element { 
-        width_sizing = "grow", height_sizing = "grow", 
-        color = { 1, 0, 0, 1 } 
-    },
-    Element { 
-        width_sizing = "grow", height_sizing = "grow", 
-        color = { 0, 1, 0, 1 } 
-    },
-}
-
-function love.update (dt)
-    if love.keyboard.isDown("space")
-        ui.width = ui.width + dt * 25
-
-        -- if these aren't called, the width won't increase
-        ui:calculate_dimensions()
-        ui:calculate_positions()
-    end
-end
-
-function love.draw ()
-    ui:draw(100, 100)
-end
-```
-
-### `:update` (dt: number)
-call this element's and its childrens' `:on_update` methods in depth-first pre-order.
-
-### `:on_update` (dt: number)
-the default `on_update` callback for this element and is intended to be overriden by subclasses. 
-
-```lua
-local Speaker = Element:extend()
-function Speaker:on_update (dt)
-    print(self.name .. "'s speaking!")
-end
-
-local ui = Speaker {
-    name = "foo",
-
-    Speaker { name = "bar" },
-    Speaker {
-        on_update = function (self, dt)
-            print("No thoughts.")
-        end
-    }
-}
-
-ui:update()
--- foo's speaking!
--- bar's speaking!
--- No thoughts.
-```
-
-### `:draw` (x: number, y: number)
-call this element's and its childrens' `:on_draw` methods in depth-first pre-order, then calling `:post_draw` in depth-first post-order.
-
-### `:on_draw` (x: number, y: number)
-the default `on_draw` callback for this element and is intended to be overriden by subclasses.
-
-### `:post_draw` (x: number, y: number)
-the default `post_draw` callback for this element and is intended to be overriden by subclasses. this is mainly for doing any graphical operations after this element's children were drawn.
-
-```lua
-local Shearable = Element:extend()
-
-function Shearable:init ()
-    self.kx = self.kx or 0
-    self.ky = self.ky or 0
-    self.width_sizing = "fit"
-    self.height_sizing = "fit"
-end
-
-function Shearable:on_draw()
-    love.graphics.shear(self.kx, self.ky)
-end
-
-function Shearable:post_draw()
-    love.graphics.shear(-self.kx, -self.ky)
-end
-
-local ui = Shearable {
-    gap = 10,
-    kx = .25,
-
-    Element {
-        width = 100, height = 100,
-        color = { 1, 0, 0, 1 }
-    },
-    Shearable {
-        ky = .25,
-
-        Element {
-            width = 100, height = 100,
-            color = { 1, 0, 0, 1 }
-        },
-    },
-    Element {
-        width = 100, height = 100,
-        color = { 1, 0, 0, 1 }
-    },
-}
-
-ui:calculate_dimensions()
-ui:calculate_positions()
-
-function love.draw ()
-    ui:draw(100, 100)
-end
-```
-
-![skewable](docs/skewable.png)
-
-### `:get_dimensions` (): number, number
-returns the computed width and height of this element.
+### `:get_dimensions (): number, number`
+Returns the elements computed width and height.
 
 ## `Text`
+A subclass of Element with some basic handling for text. Text elements have their sizing permanently set to `"grow"` so that their text can wrap.
+
+#### Configuration Parameters
+- `content: string` - The text to display.
+- `font: love.Font` - The Font object to use. Default value is whatever `love.graphics.getFont` returns.
+
 ## `Image`
+A subclass of Element for drawing images. 
+
+#### Configuration Parameters
+- `image: love.Image` - The Image object to use.
+- `path: string` - The path to the image, used only if no Image object is given.
+- `settings: { mipmaps: boolean, linear: boolean, dpiscale: number }` - The settings for the image, used only if no Image object is given.
+- `quad: love.Quad` - The Quad object to use. By default, a quad of the entire image is used.
+- `angle: number` - The image's angle of rotation.
+- `skew_x: number` - The image's horizontal skew factor.
+- `skew_y: number` - The image's vertical skew factor.
+- `scale_x: number` - The image's horizontal scale factor.
+- `scale_y: number` - The image's vertical scale factor.
+- `offset_x: number` - The image's offset along the x-axis.
+- `offset_y: number` - The image's offset along the y-axis.
+
+After construction, Images get the following fields. These are intended to use for scaling the image to the computed dimensions.
+- `sx: number` - The computed horizontal scale factor for setting the image's width to the element's `w`.
+- `sy: number` - The computed vertical scale factor for setting the image's height to the element's `h`.
+
 ## `Transformable`
+A subclass of Element for transforming it and its child element's draw calls.
+
+#### Configuration Parameters
+- `angle: number` - The element's angle of rotation.
+- `skew_x: number` - The element's horizontal skew factor.
+- `skew_y: number` - The element's vertical skew factor.
+- `scale_x: number` - The element's horizontal scale factor.
+- `scale_y: number` - The element's vertical scale factor.
+- `origin_x: number` - The element's origin offset along the x-axis.
+- `origin_y: number` - The element's origin offset along the y-axis.
+
+After construction, Transformable instances get the following fields.
+- `transform: love.Transform` - The Transform object applied before `:on_draw` and updated after `:on_update` is called.
+- `inverse: love.Transform` - The inverse Transform object applied after `:post_draw`.

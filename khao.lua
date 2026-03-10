@@ -405,18 +405,9 @@ function Element:_wrap ()
     end
 end
 
----Calculate the dimensions of this Element and its children.
-function Element:calculate_dimensions ()
-    self:_reset()
-    self:_fit("width")
-    self:_grow("width")
-    self:_wrap()
-    self:_fit("height")
-    self:_grow("height")
-end
-
----Calculates the position of this element's children relative to it.
-function Element:calculate_positions ()
+---Sets the position of this element's children relative to it.
+---@protected
+function Element:_position ()
     if #self <= 0 then
         return
     end
@@ -460,8 +451,19 @@ function Element:calculate_positions ()
 
         on_axis_coord = on_axis_coord + child[ON_AXIS_LENGTH[axis] ] + self.gap
 
-        child:calculate_positions()
+        child:_position()
     end
+end
+
+---Calculate the dimensions and relative positions of this Element and its descendents.
+function Element:calculate ()
+    self:_reset()
+    self:_fit("width")
+    self:_grow("width")
+    self:_wrap()
+    self:_fit("height")
+    self:_grow("height")
+    self:_position()
 end
 
 ---Update the element and trigger it and its children's `:on_update` methods.
@@ -578,8 +580,8 @@ end
 ---@field skew_y number
 ---@field scale_x number
 ---@field scale_y number
----@field origin_x number
----@field origin_y number
+---@field offset_x number
+---@field offset_y number
 local Image = Element:extend(false)
 
 function Image:init ()
