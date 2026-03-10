@@ -165,10 +165,6 @@ end
 ---@field max_width number?
 ---@field min_height number?
 ---@field max_height number?
----@field offset_x number
----@field offset_y number
----@field child_offset_x number
----@field child_offset_y number
 ---@field parent Element?
 ---@field align_x HorizontalAlignment
 ---@field align_y VerticalAlignment
@@ -242,11 +238,6 @@ function Element:_set_defaults ()
     self.padding_bottom = self.padding_bottom or self.padding
 
     self.padding = nil -- padding is just a shorthand
-
-    self.offset_x = self.offset_x or 0
-    self.offset_y = self.offset_y or 0
-    self.child_offset_x = self.child_offset_x or 0
-    self.child_offset_y = self.child_offset_y or 0
     
     self.name = self.name or ""
     self.color = self.color or WHITE
