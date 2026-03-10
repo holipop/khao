@@ -3,7 +3,7 @@
 > [!WARNING]
 > hey! khao is a work in progress (and so is this readme)
 
-**khao** (thai for "rice") is a declarative ui library for löve inspired by [clay](https://github.com/nicbarker/clay) and HTML. it's designed to handle all of the math behind complex layouts and leaving the graphical work for the user.
+**khao** (thai for "rice") is a declarative ui library for löve inspired by [clay](https://github.com/nicbarker/clay) and HTML. it's designed to handle all of the math behind complex layouts while leaving the graphical and logical work for the user.
 
 ## installation
 place `khao.lua` in your project and `require` it in each file you need it.
@@ -64,10 +64,10 @@ local ui = Element {
     gap = 10, 
     color = {0,0,0,0},
 
-    Element { width = 150, height = 50 }
-    Element { width = 150, height = 50 }
-    Element { width = 150, height = 50 }
-    Element { width = 150, height = 50 }
+    Element { width = 150, height = 50 },
+    Element { width = 150, height = 50 },
+    Element { width = 150, height = 50 },
+    Element { width = 150, height = 50 },
 }
 ```
 
@@ -79,8 +79,8 @@ when constructing an element, the table you pass can have the following fields:
 * `width` and `height` - the side lengths of the element in pixels. 
   - these values are disregarded if their respective sizing is `"fit"`. 
   - when their respective sizing is `"grow"`, their values become growth factors.
-* `min_width` and `min_height` - (optional) the minimum amount of pixels the side lengths can be.
-* `max_width` and `max_height` - (optional) the maximum amount of pixels the side lengths can be.
+* `min_width` and `min_height` - the minimum amount of pixels the side lengths can be.
+* `max_width` and `max_height` - the maximum amount of pixels the side lengths can be.
 * `direction` - can be `"row"` or `"column"`, determines whether elements should flow in a row or in a column.
   - is `"row"` by default.
 * `align_x` - can be `"left"`, `"center"`, or `"right"`. dictates where the child elements are aligned.
@@ -111,55 +111,217 @@ after an element has been constructed, it and its children gets the following fi
 - `y` - the y position *relative* to its parent.
 - `w` - the computed width.
 - `h` - the computed height.
-- `parent` - the element's parent element, can be nil.
+- `parent` - the element's parent element. the root element will have no parent field.
+
+## methods
+
+### `:extend` (can_have_children: boolean?): table
+returns a class that extends the `Element` class. its only param can be set to `false` if you don't want to have children.
 
 ```lua
-local t = 0
+local Menu = Element:extend() -- true by default
+local MenuItem = Element:extend(false)
+
+local ui = Menu {
+    MenuItem {},
+    MenuItem {},
+    MenuItem {
+        Element {} -- this will cause an error
+    }
+}
+```
+
+### `:init` ()
+`:init` is called whenever an element or a subclass of element is called and is intended to be overriden by the user if needed. 
+
+```lua
+-- an element that's always set to grow.
+local Growable = Element:extend()
+function Growable:init ()
+    self.width_sizing = "grow"
+    self.height_sizing = "grow"
+end
 
 local ui = Element {
-    width_sizing = "fit",
-    height_sizing = "fit",
-    padding = 10,
+    width = 200, height = 100,
 
-    on_draw = function(self, x, y)
-        local r = math.sin(t) / 2 + 0.5
-        local g = math.sin(t + math.pi * (1/3)) / 2 + 0.5
-        local b = math.sin(t + math.pi * (2/3)) / 2 + 0.5
-        love.graphics.setColor(r, g, b)
-        love.graphics.rectangle("line", x, y, self.w, self.h)
-    end,
-    post_draw = function(self, x, y)
-        love.graphics.setColor(1, 1, 1)
-    end,
+    -- when computed, will have a dimensions 200x100
+    Growable {}, 
+}
+```
 
+### `:from` (config: table): Element
+this converts a given table into an element. the string keys of the given table are properties and its indices become child elements.
+
+the indices can be plain tables, in which they'll become the same type as their parent.
+
+this method is used for the class's `__call` metamethod.
+
+```lua
+-- these are identical
+local foo = Element:from({ width = 50, height = 75 })
+local bar = Element({ width = 50, height = 75 })
+local baz = Element { width = 50, height = 75 } 
+
+local Thing = Element:extend()
+
+local ui = Thing {
+    {}, -- will become type Thing
     Element {
-        on_update = function(self, dt)
-            self.width = (math.cos(t) + 1) * 100
-            self.height = (math.sin(t) + 1) * 100
-        end,
-        on_draw = function(self, x, y)
-            love.graphics.rectangle("fill", x, y, self.w, self.h)
+        {}, -- will become type Element
+    }
+}
+```
+
+### `:add_children` (...: table)
+appends the list of this element's children. if a plain table is given, it'll become the same type as this element.
+
+```lua
+local ui = Element {
+    width_sizing = "fit", height_sizing = "fit",
+    direction = "row"
+}
+
+ui:append_children(
+    { width = 50, height = 50 },
+    { width = 50, height = 50 },
+)
+
+ui:calculate_dimensions()
+ui:calculate_positions()
+
+print(ui.w) -- 100
+print(ui.h) -- 50
+```
+
+### `:calculate_dimensions` ()
+calculates the dimensions of this element and its descendents. whenever an element is edited, this should be called for changes to update.
+
+### `:calculate_positions` ()
+calculates the relative positions of this element and its descendents. whenever `:calculate_dimensions` is called, this should be immediately after in order for relative positions to update.
+
+```lua
+local ui = Element {
+    width = 100, height = 100,
+    padding = 10,
+    gap = 10,
+
+    Element { 
+        width_sizing = "grow", height_sizing = "grow", 
+        color = {1,0,0,1} 
+    },
+    Element { 
+        width_sizing = "grow", height_sizing = "grow", 
+        color = {0,1,0,1} 
+    },
+}
+
+function love.update (dt)
+    if love.keyboard.isDown("space")
+        ui.width = ui.width + dt * 25
+
+        -- if these aren't called, the width won't increase
+        ui:calculate_dimensions()
+        ui:calculate_positions()
+    end
+end
+
+function love.draw ()
+    ui:draw(100, 100)
+end
+```
+
+### `:update` (dt: number)
+call this element's and its childrens' `:on_update` methods in depth-first pre-order.
+
+### `:on_update` (dt: number)
+the default `on_update` callback for this element and is intended to be overriden by subclasses. 
+
+```lua
+local Speaker = Element:extend()
+function Speaker:on_update (dt)
+    print(self.name .. "'s speaking!")
+end
+
+local ui = Speaker {
+    name = "foo",
+
+    Speaker { name = "bar" },
+    Speaker {
+        on_update = function (self, dt)
+            print("No thoughts.")
         end
     }
+}
+
+ui:update()
+-- foo's speaking!
+-- bar's speaking!
+-- No thoughts.
+```
+
+### `:draw` (x: number, y: number)
+call this element's and its childrens' `:on_draw` methods in depth-first pre-order, then calling `:post_draw` in depth-first post-order.
+
+### `:on_draw` (x: number, y: number)
+the default `on_draw` callback for this element and is intended to be overriden by subclasses.
+
+### `:post_draw` (x: number, y: number)
+the default `post_draw` callback for this element and is intended to be overriden by subclasses. this is mainly for doing any graphical operations after this element's children were drawn.
+
+```lua
+local Shearable = Element:extend()
+
+function Shearable:init ()
+    self.kx = self.kx or 0
+    self.ky = self.ky or 0
+    self.width_sizing = "fit"
+    self.height_sizing = "fit"
+end
+
+function Shearable:on_draw()
+    love.graphics.shear(self.kx, self.ky)
+end
+
+function Shearable:post_draw()
+    love.graphics.shear(-self.kx, -self.ky)
+end
+
+local ui = Shearable {
+    gap = 10,
+    kx = .25,
+
+    Element {
+        width = 100, height = 100,
+        color = { 1, 0, 0, 1 }
+    },
+    Shearable {
+        ky = .25,
+
+        Element {
+            width = 100, height = 100,
+            color = { 1, 0, 0, 1 }
+        },
+    },
+    Element {
+        width = 100, height = 100,
+        color = { 1, 0, 0, 1 }
+    },
 }
 
 ui:calculate_dimensions()
 ui:calculate_positions()
 
-function love.update (dt)  
-    t = t + dt
-
-    ui:update(dt)
-
-    -- whenever you change the sizing of an element, you should call these to recalculate sizes and positions.
-    ui:calculate_dimensions() 
-    ui:calculate_positions()
-end
-
 function love.draw ()
     ui:draw(100, 100)
-
-    love.graphics.print("t: " .. t, 50, 50)
 end
 ```
-![rainbow](docs/rainbow.gif)
+
+![skewable](docs/skewable.png)
+
+### `:get_dimensions` (): number, number
+returns the computed width and height of this element.
+
+## `Text`
+## `Image`
+## `Transformable`
