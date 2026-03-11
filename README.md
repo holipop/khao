@@ -50,7 +50,6 @@ Constructs an Element from a given configuration table, its keys being propertie
 
 #### Configuration Parameters
 - `width_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the width. `"fixed"` by default. 
-
 - `height_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the height. `"fixed"` by default. 
 - `width: number` - If sizing is set to `"fixed"`, the width in pixels. If sizing is set to `"grow"`, the proportion of available width this element takes.
 - `height: number` - If sizing is set to `"fixed"`, the height in pixels. If sizing is set to `"grow"`, the proportion of available height this element takes.
