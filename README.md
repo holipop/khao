@@ -3,7 +3,7 @@
 > [!WARNING]
 > hey! khao is a work in progress (and so is this readme)
 
-**khao** (thai for "rice") is a declarative layout library for LÖVE inspired by [clay](https://github.com/nicbarker/clay) and HTML. It's designed to be as close to "what you see is what you get" as possible within the syntax of Lua.
+**khao** (thai for "rice") is a layout library for LÖVE inspired by [clay](https://github.com/nicbarker/clay) and HTML. It's designed to be as declarative and terse as possible within the syntax of Lua.
 
 ## Installation
 Place `khao.lua` in your project and use `require` whereever you need it.
@@ -12,7 +12,32 @@ local khao = require("khao") -- if khao.lua is in your root directory
 local khao = require("path.to.khao") -- if it's in a subfolder
 ```
 
-## Overview
+## Basic Overview
+The `Element` class acts as the foundation of khao. To construct one, use the `:from` method or call the class directly, then pass a configuration table where its keys are properties of the element and its indices are child elements.
+
+```lua
+local Element = khao.Element
+local Text = khao.Text
+
+local thing = Element { 
+    width = 150, 
+    height = 100,
+    align_x = "center",
+    align_y = "center",
+
+    Text {
+        content = "Hello World!"
+    }
+}
+```
+We can then call the `:calculate` method that computes the dimensions and positions of each element, which then allows us to `:draw` our elements where ever we like.
+```lua
+thing:calculate()
+
+function love.draw ()
+    thing:draw(100, 100)
+end
+```
 
 ## Example
 
@@ -24,8 +49,8 @@ The base element class.
 Constructs an Element from a given configuration table, its keys being properties and its indices being child elements. Can also be invoked by calling the `Element` class itself.
 
 #### Configuration Parameters
-- `width_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the width. `fixed"` by default. 
-- `height_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the height. `fixed"` by default. 
+- `width_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the width. `"fixed"` by default. 
+- `height_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the height. `"fixed"` by default. 
 - `width: number` - If sizing is set to `"fixed"`, the width in pixels. If sizing is set to `"grow"`, the proportion of available width this element takes.
 - `height: number` - If sizing is set to `"fixed"`, the height in pixels. If sizing is set to `"grow"`, the proportion of available height this element takes.
 - `min_width: number` - The minimum width in pixels.

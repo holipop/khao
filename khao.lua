@@ -196,7 +196,7 @@ function Element:from (config)
     instance:_set_defaults()
     instance:init()
 
-    if self.__leaf and #self < 1 then
+    if self.__leaf and #self > 0 then
         error("element cannot have children")
     end
         
