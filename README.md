@@ -13,7 +13,7 @@ local khao = require("path.to.khao") -- if it's in a subfolder
 ```
 
 ## Basic Overview
-The `Element` class acts as the foundation of khao. To construct one, use the `:from` method or call the class directly, then pass a configuration table where its keys are properties of the element and its indices are child elements.
+The `Element` class acts as the foundation of khao. To construct one, use the `:from` method or call the class directly, then pass a configuration table where its _keys are properties_ of the element and its _indices are child elements_.
 
 ```lua
 local Element = khao.Element
@@ -50,6 +50,7 @@ Constructs an Element from a given configuration table, its keys being propertie
 
 #### Configuration Parameters
 - `width_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the width. `"fixed"` by default. 
+
 - `height_sizing: "fixed"|"fit"|"grow"` - The sizing behavior of the height. `"fixed"` by default. 
 - `width: number` - If sizing is set to `"fixed"`, the width in pixels. If sizing is set to `"grow"`, the proportion of available width this element takes.
 - `height: number` - If sizing is set to `"fixed"`, the height in pixels. If sizing is set to `"grow"`, the proportion of available height this element takes.
@@ -72,14 +73,12 @@ Constructs an Element from a given configuration table, its keys being propertie
 - `on_draw: function (self, x: number, y: number)` - A callback fired when the root element calls `:draw`
 - `post_draw: function (self, x: number, y: number)` - A callback fired after child elements have been drawn.
 
-Instances of `Element` have the following fields upon creation along with the ones listed above. 
+Instances of `Element` have the following fields upon creation along with the ones listed above. _These should be treated as read-only._
 - `parent: Element?` - The parent element. `nil` if it is a root element.
 - `x: number` - The x position relative to its parent.
 - `y: number` - The y position relative to its parent.
 - `w: number` - The calculated width.
 - `h: number` - The calculated height.
-
-These should be treated as read-only.
 
 ### `:add_children (...: table|Element)`
 Adds child elements to the end of the list of children. Configuration tables can be inputed which get instantiated as the type of the element.
