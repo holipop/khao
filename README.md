@@ -59,7 +59,7 @@ Constructs an Element from a given configuration table, its keys being propertie
 - `max_height: number` - The maximum height in pixels.
 - `align_x: "left"|"center"|"right"` - The positioning of child elements along the x-axis. `"left"` by default. 
 - `align_y: "top"|"center"|"bottom"` - The positioning of child elements along the y-axis. `"top"` by default.
-- `direction: "row"|"column"` - `"row"` by default. The direction child elements are drawn.
+- `direction: "row"|"column"` - The direction child elements are drawn. `"row"` by default. 
 - `padding: number` - A shorthand for setting all padding values.
 - `padding_left: number` - The amount of pixels between the child elements and the left edge.
 - `padding_right: number` - The amount of pixels between the child elements and the right edge.
@@ -90,6 +90,9 @@ An abstract method called whenever elements are instantiated. Intended for subcl
 
 ### `:calculate ()`
 Calculates the dimensions and positions of the element and its descendents. This should be called after initialization and whenever changes are made an element's properties so it and its descendents' `x`, `y`, `w`, and `h` fields are updated.
+
+### `:on_calc ()`
+The default callback fired by `:calculate` and called if an element instance doesn't have an `calculate` callback, intended to be overriden by subclasses for custom sizing calculations.
 
 ### `:update (dt: number)`
 Calls the element's and its descendents' `:on_update` callbacks.
@@ -136,7 +139,7 @@ After construction, Images get the following fields. These are intended to use f
 - `sx: number` - The computed horizontal scale factor for setting the image's width to the element's `w`.
 - `sy: number` - The computed vertical scale factor for setting the image's height to the element's `h`.
 
-## `Transformable`
+## `Transform`
 A subclass of Element for transforming it and its child element's draw calls.
 
 #### Configuration Parameters
@@ -148,6 +151,5 @@ A subclass of Element for transforming it and its child element's draw calls.
 - `origin_x: number` - The element's origin offset along the x-axis.
 - `origin_y: number` - The element's origin offset along the y-axis.
 
-After construction, Transformable instances get the following fields.
+After construction, Transform instances keep a LÖVE Transform object.
 - `transform: love.Transform` - The Transform object applied before `:on_draw` and updated after `:on_update` is called.
-- `inverse: love.Transform` - The inverse Transform object applied after `:post_draw`.
