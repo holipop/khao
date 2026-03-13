@@ -578,6 +578,9 @@ end
 ---@class khao.Text : khao.Element
 ---@field content string
 ---@field font love.Font
+---@field on_update fun(self: khao.Text, dt: number)?
+---@field on_draw fun(self: khao.Text, x: number, y: number)?
+---@field post_draw fun(self: khao.Text, x: number, y: number)?
 ---@overload fun(config: khao.ElementConfig): khao.Text
 local Text = Element:extend()
 
@@ -628,6 +631,9 @@ end
 ---@field scale_y number
 ---@field offset_x number
 ---@field offset_y number
+---@field on_update fun(self: khao.Image, dt: number)?
+---@field on_draw fun(self: khao.Image, x: number, y: number)?
+---@field post_draw fun(self: khao.Image, x: number, y: number)?
 ---@overload fun(config: khao.ElementConfig): khao.Image
 local Image = Element:extend()
 
@@ -677,7 +683,7 @@ function Image:on_draw (x, y)
 end
 
 
----- Transformable ----
+---- Transform ----
 
 ---@class khao.Transform : khao.Element
 ---@field transform love.Transform
@@ -688,6 +694,9 @@ end
 ---@field scale_y number
 ---@field origin_x number
 ---@field origin_y number
+---@field on_update fun(self: khao.Transform, dt: number)?
+---@field on_draw fun(self: khao.Transform, x: number, y: number)?
+---@field post_draw fun(self: khao.Transform, x: number, y: number)?
 ---@overload fun(config: khao.ElementConfig): khao.Transform
 local Transform = Element:extend()
 
