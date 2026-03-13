@@ -142,33 +142,60 @@ end
 
 ---- Element ----
 
----@alias Axis "width"|"height"
----@alias SizingType "fixed"|"fit"|"grow"
----@alias DirectionType "row"|"column"
----@alias HorizontalAlignment "left"|"center"|"right"
----@alias VerticalAlignment "top"|"center"|"bottom"
+---@alias khao.Axis "width"|"height"
+---@alias khao.SizingType "fixed"|"fit"|"grow"
+---@alias khao.DirectionType "row"|"column"
+---@alias khao.HorizontalAlignment "left"|"center"|"right"
+---@alias khao.VerticalAlignment "top"|"center"|"bottom"
 
----@class Element
----@field private __index Element
----@field private __call fun(table): Element
----@field private __leaf boolean Can this Element have children?
----@field [number] Element
+---@class khao.ElementConfig
+---@field [number] khao.ElementConfig
+---@field [string] any
+---@field width_sizing khao.SizingType?
+---@field height_sizing khao.SizingType?
+---@field width number?
+---@field height number?
+---@field min_width number?
+---@field max_width number?
+---@field min_height number?
+---@field max_height number?
+---@field align_x khao.HorizontalAlignment?
+---@field align_y khao.VerticalAlignment?
+---@field direction khao.DirectionType?
+---@field padding number?
+---@field padding_left number?
+---@field padding_right number?
+---@field padding_top number?
+---@field padding_bottom number?
+---@field gap number?
+---@field name string?
+---@field color [number, number, number, number]?
+---@field on_update fun(self: khao.Element, dt: number)?
+---@field on_draw fun(self: khao.Element, x: number, y: number)?
+---@field post_draw fun(self: khao.Element, x: number, y: number)?
+
+---@class khao.Element : khao.ElementConfig
+---@field private __index khao.Element
+---@field private __call fun(self, config: table): khao.Element
+---@field [number] khao.Element
+---@field [string] any
 ---@field x number
 ---@field y number
 ---@field w number
 ---@field h number
----@field width_sizing SizingType
----@field height_sizing SizingType
+---@field parent khao.Element?
+---@field width_sizing khao.SizingType
+---@field height_sizing khao.SizingType
 ---@field width number
 ---@field height number
 ---@field min_width number?
 ---@field max_width number?
 ---@field min_height number?
 ---@field max_height number?
----@field parent Element?
----@field align_x HorizontalAlignment
----@field align_y VerticalAlignment
----@field direction DirectionType
+---@field align_x khao.HorizontalAlignment
+---@field align_y khao.VerticalAlignment
+---@field direction khao.DirectionType
+---@field padding nil
 ---@field padding_left number
 ---@field padding_right number
 ---@field padding_top number
@@ -176,42 +203,54 @@ end
 ---@field gap number
 ---@field name string
 ---@field color [number, number, number, number]
----@field on_update fun(self: Element, dt: number)?
----@field on_draw fun(self: Element, x: number, y: number)?
----@field post_draw fun(self: Element, x: number, y: number)?
+---@field on_update fun(self: khao.Element, dt: number)?
+---@field on_draw fun(self: khao.Element, x: number, y: number)?
+---@field post_draw fun(self: khao.Element, x: number, y: number)?
+---@overload fun(config: khao.ElementConfig): khao.Element
 local Element = {}
+
+---@diagnostic disable-next-line: assign-type-mismatch
 Element.__index = Element
-Element.__leaf = false
 
 ---Initialization for this Element, intended to be overriden by subclasses.
 function Element:init ()
     -- abstract
 end
 
----Converts a configuration table into an Element. Its indices become child Elements of the same type as their parent.
----@param config any
----@return Element
+---Converts a configuration table into an Element.
+---@param config khao.ElementConfig
+---@return khao.Element
 function Element:from (config)
     local instance = setmetatable(config, self)
-    instance:_set_defaults()
     instance:init()
+    instance:_set_defaults()
 
-    if self.__leaf and #self > 0 then
-        error("element cannot have children")
-    end
-        
-    for index, child in ipairs(instance) do
+    for index, child in ipairs(instance) do 
         if not getmetatable(child) then
-            child = self:from(child)
+            child = self:from(child) 
         end
 
-        child.parent = instance
+        child.parent = instance --[[@as khao.Element]]
     end
 
-    return instance
+    return instance --[[@as khao.Element]]
 end
+
+---@diagnostic disable-next-line: param-type-mismatch
 setmetatable(Element, { __call = Element.from })
 Element.__call = Element.from
+
+---Creates a shallow copy of a given configuration table, converting the clone into an Element.
+---@param config khao.ElementConfig
+---@return khao.Element
+function Element:new (config)
+    local instance = {}
+    for key, value in pairs(config) do
+        instance[key] = value
+    end
+
+    return self:from(instance)
+end
 
 ---Default values for all Elements.
 ---@private
@@ -244,10 +283,9 @@ function Element:_set_defaults ()
 end
 
 ---Add the given children to the end of this Element's list of children.
----@param ... table
+---@param ... table | khao.Element
 ---@return self
 function Element:add_children (...)
-    assert(not self.__leaf, "element cannot have children")
     local length = select("#", ...)
     
     for index = 1, length do
@@ -265,18 +303,11 @@ function Element:add_children (...)
 end
 
 ---Returns a class that inherits this class. 
----By default, the returned class can have children.
----@param can_have_children boolean?
 ---@return self
-function Element:extend (can_have_children)
-    if type(can_have_children) == "nil" then
-        can_have_children = true
-    end
-
+function Element:extend ()
     local Class = setmetatable({}, self)
     Class.__index = Class
     Class.__call = Element.from
-    Class.__leaf = not can_have_children
 
     return Class
 end
@@ -307,7 +338,7 @@ end
 
 ---Sets the width or height of all elements with "fit" sizing.
 ---@protected
----@param axis Axis
+---@param axis khao.Axis
 function Element:_fit (axis)
     local sizing = SIZING[axis]
     local output = ON_AXIS_LENGTH[axis]
@@ -341,7 +372,7 @@ end
 
 ---Sets the width or height of all Elements with "grow" sizing.
 ---@protected
----@param axis Axis
+---@param axis khao.Axis
 function Element:_grow (axis)
     local sizing = SIZING[axis]
     local output = ON_AXIS_LENGTH[axis]
@@ -455,6 +486,16 @@ function Element:_position ()
     end
 end
 
+---A dummy method for recursively calling `:on_calc`
+---@protected
+function Element:_calc ()
+    self:on_calc()
+    
+    for index, child in ipairs(self) do
+        child:_calc()
+    end
+end
+
 ---Calculate the dimensions and relative positions of this Element and its descendents.
 function Element:calculate ()
     self:_reset()
@@ -464,6 +505,12 @@ function Element:calculate ()
     self:_fit("height")
     self:_grow("height")
     self:_position()
+    self:_calc()
+end
+
+---A callback fired after this element's dimensions and positions are calculated, intended to be overridden by subclasses.
+function Element:on_calc ()
+    -- abstract
 end
 
 ---Update the element and trigger it and its children's `:on_update` methods.
@@ -485,6 +532,7 @@ function Element:draw (x, y)
     x = x + self.x
     y = y + self.y
 
+    love.graphics.push("all")
     self:on_draw(x, y)
 
     for index, child in ipairs(self) do
@@ -492,6 +540,7 @@ function Element:draw (x, y)
     end
 
     self:post_draw(x, y)
+    love.graphics.pop()
 end
 
 ---A callback for when this element is updated, intended to be overridden by subclasses.
@@ -526,10 +575,11 @@ end
 
 ---- Text ---- 
 
----@class Text : Element
+---@class khao.Text : khao.Element
 ---@field content string
 ---@field font love.Font
-local Text = Element:extend(false)
+---@overload fun(config: khao.ElementConfig): khao.Text
+local Text = Element:extend()
 
 function Text:init ()
     self.content = self.content or ""
@@ -545,7 +595,6 @@ function Text:init ()
     self.min_height = self.min_height or self.font:getHeight()
     self.max_height = self.max_height or 0
 
-    self.color = nil
     self.color = self.color or BLACK
 end
 
@@ -559,22 +608,19 @@ function Text:_wrap ()
 end
 
 function Text:on_draw (x, y)
-    love.graphics.setColor(0, 0, 1, .15)
-    love.graphics.rectangle("line", x, y, self:get_dimensions())
-
     love.graphics.setColor(self.color)
     love.graphics.setFont(self.font)
     love.graphics.printf(self.content, x, y, self.w)
-
-    love.graphics.setFont(DEFAULT_FONT)
 end
 
 
 ---- Image ----
 
----@class Image : Element
+---@class khao.Image : khao.Element
 ---@field image love.Image
----@field quad love.Quad?
+---@field quad love.Quad
+---@field path string?
+---@field settings table?
 ---@field angle number
 ---@field skew_x number
 ---@field skew_y number
@@ -582,7 +628,8 @@ end
 ---@field scale_y number
 ---@field offset_x number
 ---@field offset_y number
-local Image = Element:extend(false)
+---@overload fun(config: khao.ElementConfig): khao.Image
+local Image = Element:extend()
 
 function Image:init ()
     self.path = self.path
@@ -592,14 +639,11 @@ function Image:init ()
     local image_width, image_height = self.image:getDimensions()
     self.quad = self.quad or love.graphics.newQuad(0, 0, image_width, image_height, image_width, image_height)
 
-    self.path = nil -- shorthands
-    self.settings = nil
+    self.width = self.width or image_width
+    self.height = self.height or image_height
 
-    self.width = ternary(self.width == 0, image_width, self.width)
-    self.height = ternary(self.height == 0, image_height, self.height)
-
-    self.sx = self.width / image_width
-    self.sy = self.height / image_height
+    self.sx = 1
+    self.sy = 1
 
     self.angle = self.angle or 0
     self.skew_x = self.skew_x or 0
@@ -608,6 +652,15 @@ function Image:init ()
     self.scale_y = self.scale_y or 1
     self.offset_x = self.offset_x or 0
     self.offset_y = self.offset_y or 0
+
+    self.color = self.color or WHITE
+end
+
+function Image:on_calc ()
+    local image_width, image_height = self.image:getDimensions()
+
+    self.sx = self.w / image_width
+    self.sy = self.h / image_height
 end
 
 function Image:on_draw (x, y)
@@ -626,9 +679,8 @@ end
 
 ---- Transformable ----
 
----@class Transformable : Element
+---@class khao.Transform : khao.Element
 ---@field transform love.Transform
----@field inverse love.Transform
 ---@field angle number
 ---@field skew_x number
 ---@field skew_y number
@@ -636,9 +688,10 @@ end
 ---@field scale_y number
 ---@field origin_x number
 ---@field origin_y number
-local Transformable = Element:extend()
+---@overload fun(config: khao.ElementConfig): khao.Transform
+local Transform = Element:extend()
 
-function Transformable:init ()
+function Transform:init ()
     self.angle = self.angle or 0
     self.skew_x = self.skew_x or 0
     self.skew_y = self.skew_y or 0
@@ -654,33 +707,9 @@ function Transformable:init ()
         self.origin_x, self.origin_y,
         self.skew_x, self.skew_y
     )
-    self.inverse = self.transform:inverse()
 end
 
-function Transformable:update (dt)
-    self:on_update(dt)
-    self.transform:setTransformation(
-        0, 0, 
-        self.angle, 
-        self.scale_x, self.scale_y, 
-        self.origin_x, self.origin_y,
-        self.skew_x, self.skew_y
-    )
-    
-    self.inverse
-        :reset()
-        :translate(self.origin_x, self.origin_y)
-        :shear(-self.skew_x, -self.skew_y)
-        :scale(1 / self.scale_x, 1 / self.scale_y)
-        :rotate(-self.angle)
-        :translate(0, 0)
-
-    for index, child in ipairs(self) do
-        child:update(dt)
-    end
-end
-
-function Transformable:draw (x, y)
+function Transform:draw (x, y)
     x = x + self.x
     y = y + self.y
 
@@ -691,15 +720,8 @@ function Transformable:draw (x, y)
         self.origin_x, self.origin_y,
         self.skew_x, self.skew_y
     )
-    
-    self.inverse
-        :reset()
-        :translate(self.origin_x, self.origin_y)
-        :shear(-self.skew_x, -self.skew_y)
-        :scale(1 / self.scale_x, 1 / self.scale_y)
-        :rotate(-self.angle)
-        :translate(-x, -y)
 
+    love.graphics.push("all")
     love.graphics.applyTransform(self.transform)
     self:on_draw(0, 0)
 
@@ -708,12 +730,12 @@ function Transformable:draw (x, y)
     end
 
     self:post_draw(0, 0)
-    love.graphics.applyTransform(self.inverse)
+    love.graphics.pop()
 end
 
 
 local khao = {
-    LICENSE = [[
+    _LICENSE = [[
         MIT License
 
         Copyright (c) 2026 holipop
@@ -764,7 +786,7 @@ local khao = {
     Element = Element,
     Text = Text,
     Image = Image,
-    Transformable = Transformable,
+    Transform = Transform,
 }
 
 return khao
