@@ -593,9 +593,9 @@ function Text:init ()
     self.width = 1
     self.height = 1
 
-    self.min_width = self.min_width or self.font:getHeight()
+    self.min_width = self.min_width or self.font:getHeight() * self.font:getLineHeight()
     self.max_width = self.max_width or self.font:getWidth(self.content)
-    self.min_height = self.min_height or self.font:getHeight()
+    self.min_height = self.min_height or self.font:getHeight() * self.font:getLineHeight()
     self.max_height = self.max_height or 0
 
     self.color = self.color or BLACK
@@ -604,18 +604,20 @@ end
 function Text:_wrap ()
     local _, wrapped_text = self.font:getWrap(self.content, self.w)
     
-    local height = self.font:getHeight() * #wrapped_text
+    local height = self.font:getHeight() * self.font:getLineHeight() * #wrapped_text
     self.h = height
     self.max_height = height
     self.min_height = self.max_height
 end
 
 function Text:on_draw (x, y)
+    love.graphics.setColor(1, 0, 0, 1)
+    love.graphics.rectangle("line", x, y, self.w, self.h)
+
     love.graphics.setColor(self.color)
     love.graphics.setFont(self.font)
     love.graphics.printf(self.content, x, y, self.w)
 end
-
 
 ---- Image ----
 
@@ -645,8 +647,9 @@ function Image:init ()
     local image_width, image_height = self.image:getDimensions()
     self.quad = self.quad or love.graphics.newQuad(0, 0, image_width, image_height, image_width, image_height)
 
-    self.width = self.width or image_width
-    self.height = self.height or image_height
+    local _, _, quad_width, quad_height = self.quad:getViewport()
+    self.width = self.width or quad_width
+    self.height = self.height or quad_height
 
     self.sx = 1
     self.sy = 1
@@ -663,10 +666,10 @@ function Image:init ()
 end
 
 function Image:on_calc ()
-    local image_width, image_height = self.image:getDimensions()
+    local _, _, quad_width, quad_height = self.quad:getViewport()
 
-    self.sx = self.w / image_width
-    self.sy = self.h / image_height
+    self.sx = self.w / quad_width
+    self.sy = self.h / quad_height
 end
 
 function Image:on_draw (x, y)
